@@ -132,12 +132,16 @@ class WatchdogStore:
             columns = {row[1] for row in conn.execute("PRAGMA table_info(checks)")}
             if "kind" not in columns:
                 conn.execute("ALTER TABLE checks ADD COLUMN kind TEXT NOT NULL DEFAULT 'http'")
-            n = conn.execute("SELECT COUNT(*) AS n FROM checks").fetchone()["n"]
-            if n == 0:
-                conn.execute(
-                    "INSERT INTO checks (id,name,url,interval_minutes,enabled) VALUES (?,?,?,?,?)",
-                    ("github-api", "GitHub API", DEFAULT_URL, 15, 1),
-                )
+            # Initialize built-in checks only on first boot. A user's removal
+            # must not be undone on every restart.
+            if conn.execute("SELECT value FROM settings WHERE key='health_defaults_seeded'").fetchone() is None:
+                n = conn.execute("SELECT COUNT(*) AS n FROM checks").fetchone()["n"]
+                if n == 0:
+                    conn.execute(
+                        "INSERT INTO checks (id,name,url,interval_minutes,enabled) VALUES (?,?,?,?,?)",
+                        ("github-api", "GitHub API", DEFAULT_URL, 15, 1),
+                    )
+                conn.execute("INSERT INTO settings (key,value) VALUES ('health_defaults_seeded','true')")
             # Seed once only, so deleting this monitor later is respected.
             if conn.execute("SELECT value FROM settings WHERE key='ci_defaults_seeded'").fetchone() is None:
                 current_count = conn.execute("SELECT COUNT(*) FROM checks").fetchone()[0]
