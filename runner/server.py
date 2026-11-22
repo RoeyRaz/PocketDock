@@ -6,6 +6,7 @@ The Watchdog control API requires a random, per-device pairing token.
 from __future__ import annotations
 
 import argparse
+import fcntl
 from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -178,22 +179,30 @@ def main():
         print(store.token())
         return
 
-    Handler.store = store
-    server = ThreadingHTTPServer((HOST, PORT), Handler)
-    server.daemon_threads = True
-    stop = threading.Event()
-    worker = threading.Thread(target=store.run_scheduler, args=(stop,), daemon=True)
-    worker.start()
-    print(f"PocketDock Runner: http://{HOST}:{PORT}/health")
-    print("Watchdog active on this phone. Pair via --show-token. Ctrl+C stops it.")
-    try:
-        server.serve_forever()
-    except KeyboardInterrupt:
-        pass
-    finally:
-        stop.set()
-        server.server_close()
-        worker.join(timeout=6)
+    lock_file = store.home / "runner.lock"
+    with lock_file.open("a+") as lock:
+        try:
+            fcntl.flock(lock.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError:
+            print("PocketDock Runner is already running in another Termux session.")
+            return
+        Handler.store = store
+        server = ThreadingHTTPServer((HOST, PORT), Handler)
+        server.daemon_threads = True
+        stop = threading.Event()
+        worker = threading.Thread(target=store.run_scheduler, args=(stop,), daemon=True)
+        worker.start()
+        print(f"PocketDock Runner: http://{HOST}:{PORT}/health")
+        print("Watchdog active on this phone. Pair via --show-token. Ctrl+C stops it.")
+        try:
+            server.serve_forever()
+        except KeyboardInterrupt:
+            pass
+        finally:
+            stop.set()
+            server.server_close()
+            worker.join(timeout=6)
+            fcntl.flock(lock.fileno(), fcntl.LOCK_UN)
 
 
 if __name__ == "__main__":
