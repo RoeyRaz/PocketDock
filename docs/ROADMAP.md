@@ -68,3 +68,19 @@ Kotlin + Jetpack Compose, landscape-first layout. Start with read-only runner st
 ### Guardrails
 
 No Windows processes removed until their migration is proven safe and measured. Do not write private tokens to GitHub or a public Android build. PocketDock does not yet embed Codex nor manage private GitHub work.
+
+## Milestone 2.2 — Android Runner Watchdog (v0.3)
+
+- [x] Persistent SQLite-based HTTPS checks with state-change history.
+- [x] Pairing token generated on Android; authenticated localhost control endpoints.
+- [x] APK control screen for checks, history, opt-in alerts and manual actions.
+- [x] Private local Inbox with file import/export and size limits.
+- [x] Optional Termux:Boot launcher script and process single-instance lock.
+- [x] Python safety tests and Android debug APK build passed in [run 45072812737](https://github.com/RoeyRaz/PocketDock/actions/runs/45072812737).
+- [ ] Install v0.3 APK on the Samsung and pair with updated Runner.
+- [ ] Test a manually added check, persistence after restart and state-change alerts.
+- [ ] Test Runner after Windows PC is powered off and Android screen is locked.
+- [ ] Measure phone battery cost over a representative period.
+- [ ] Identify and safely migrate exactly one existing PC-side background check, with baseline and after measurements.
+
+**Scope control:** PhoneBox continues handling Windows UI. PocketDock intentionally has no PC remote-control feature, private Codex API access, automated SFTP sync or Windows task migration. Those are neither built nor verified by this milestone.
