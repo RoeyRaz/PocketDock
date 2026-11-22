@@ -1,62 +1,63 @@
 # PocketDock
 
-An Android-first companion for a Windows PC. The goal is to run useful lightweight jobs **on the phone**, not simply mirror desktop data.
+Android-first landscape companion for a Windows PC. Useful light work runs on the **Samsung phone** instead of spawning additional Windows services.
 
-> **Status:** Termux Runner was tested successfully on the Samsung phone (user confirmed). Initial Android app source and GitHub Actions workflow are present, but the APK build and phone installation have not yet been verified.
+**Current state:** The 0.1 APK was installed on the Samsung and showed `RUNNER ONLINE` (confirmed by the user). Version **0.2** adds real Focus and Developer screens, but its new build has **not yet been validated on the phone**. The computer-off independence test is also pending.
 
-## What we are building
+## What version 0.2 implements
 
-- **Runner:** lightweight scripts and local services executed on an old Samsung Android phone.
-- **Panel:** a landscape Android dashboard for tasks, tools, computer control, and file access.
-- **Dev:** a view of GitHub Actions and Codex Cloud work so heavy development tasks can stay off the Windows PC.
-- **Vault:** optional SFTP-based file storage, with manual USB file transfer when useful.
+- **Home:** live local Runner status, uptime, available Termux storage and a manual network check executed on the phone.
+- **Focus:** a local foreground 25/45-minute timer, the next event from the Android calendar (requires permission), and **read-only Notion Daylight** tasks after an optional one-time connection.
+- **Dev:** latest workflow status and open pull requests from a **public GitHub repository**. Repository is editable in the UI. A button opens Codex Cloud in the browser.
+- **Settings:** optionally store a scoped Notion integration secret **only on the phone**, encrypted using Android Keystore. The token is never compiled into the APK or committed to GitHub.
 
-PhoneBox and the existing Notion/Daylight setup remain in place until a replacement is genuinely useful and tested.
+No permanent Windows process, no Android boot receiver, no root and no remote shell.
 
-## Milestone 1: run a service entirely on the phone
+## Install the updated Runner
 
-This starter uses Python's standard library only. No root, cloud account, Android Studio, or Windows background service is needed.
+In the existing Termux folder on the **phone**, stop the old Runner with Ctrl+C, then:
 
-1. Install Termux from a maintained official distribution channel (for example F-Droid).
-2. In Termux, run:
+```sh
+cd ~/PocketDock
+git pull --ff-only
+python runner/server.py
+```
 
-   ```sh
-   pkg update
-   pkg install python git
-   git clone https://github.com/RoeyRaz/PocketDock.git
-   cd PocketDock
-   python runner/server.py
-   ```
-3. On **the phone itself**, open `http://127.0.0.1:8799/health`.
+Open `http://127.0.0.1:8799/health` to verify the basic endpoint. The new endpoints are:
 
-You should receive a JSON response containing `"status": "ok"`. This confirms the service is executing on Android, rather than on Windows.
+- `/status`: process uptime and storage available to Termux.
+- `/checks/github`: a single outbound GitHub connectivity check initiated from the phone.
 
-Stop it using **Ctrl+C** in Termux. It is intentionally **not** configured to run at boot.
+The HTTP server binds to loopback `127.0.0.1` only. **Do not expose it to your local network or the public internet.** It has no ability to execute shell commands.
 
-### Security
+## Download and install the updated APK
 
-The prototype listens on `127.0.0.1` only. It is not reachable from other devices or the internet. Do not expose it through port forwarding or change its bind address before we add pairing, authentication, and a command allowlist.
+Run the [Android debug APK workflow](https://github.com/RoeyRaz/PocketDock/actions/workflows/android-debug.yml) manually, or use the output from an approved PR build. The successful job uploads a `pocketdock-debug-apk` artifact containing `app-debug.apk`. Install it over the older debug APK. **Do not install an artifact if its build failed.**
 
-Never commit passwords, API keys, private Notion data, Android backups, or personal configuration files.
+The Android UI and Runner communicate over localhost. The build is run in GitHub Actions, not Android Studio on your Windows machine.
 
-## Next milestones
+## Optional: connect Daylight read-only
 
-1. Verify the Runner works with the Windows PC powered off.
-2. Measure phone heat, battery impact, and Windows memory usage before and after migrating any existing task.
-3. Build a small Kotlin + Jetpack Compose landscape APK with status and task panels.
-4. Add a narrowly scoped authenticated PC bridge, only for features requiring Windows.
-5. Set up GitHub Actions to build and test the APK in the cloud.
+1. Create a Notion **internal integration** for your own workspace, with **Read content** capability only. Do not grant write access.
+2. In Notion, share the Daylight **task database** with that integration. Copy its **data source ID** (not the page title or URL).
+3. In PocketDock open **הגדרות**. Enter the data source ID and the internal integration token. Tap **שמור**.
+4. Open **פוקוס** and refresh. The app requests active tasks (excluding the Shop list when present).
 
-See [docs/ROADMAP.md](docs/ROADMAP.md) for scope and success criteria.
+The token stays on the Android device and is encrypted at rest via Android Keystore. No token is passed through GitHub Actions, placed in source code, or sent to this chat. Treat the token like a password. You can revoke it in Notion or tap **נתק** in the app. Requires internet access from the phone and a working Notion API integration. Errors are shown in the UI.
 
-**Maintainer:** RoeyRaz. License and public release plan to be decided.
+Without this configuration, Focus still provides the local timer and Android calendar view. The regular PhoneBox and existing Daylight sync remain untouched.
 
-## Native Android APK (prototype)
+## Calendar permissions
 
-Android app source is in `app/`. The landscape dashboard checks the existing loopback-only Runner at `127.0.0.1:8799`, shows online/offline status, and provides a manual Refresh button. It does not automatically start Termux and does not run a background service.
+Focus requests Android's `READ_CALENDAR` permission when you tap **אשר גישה ליומן**. The next visible calendar event on the phone is shown. If the relevant Google Calendar account isn't synced to the Samsung, it won't appear even if it exists on your Windows computer.
 
-The workflow at [Actions](https://github.com/RoeyRaz/PocketDock/actions) attempts a cloud debug build on changes to Android code. **A committed workflow does not mean a build has succeeded.**
+## Important limitations
 
-After the workflow shows a successful run, download the `pocketdock-debug-apk` build artifact, extract the APK on the Android phone, and install it. Run the Python Runner in Termux first, then open the app and press Refresh.
+- The Focus timer runs in the app, not in a persistent background service. No background alerts yet.
+- Dev uses GitHub's public API without a token. Private repositories require a separate authenticated connection, which is not implemented.
+- Codex opens in the browser. PocketDock **does not** yet have access to private Codex session status.
+- Daylight is **read-only**. No creating or marking tasks complete.
+- Status refreshes are on-demand to avoid unnecessary network and battery usage.
+- No existing Windows tasks have been migrated or disabled. Offloading must be measured before changing the user's working setup.
 
-The app currently permits HTTP cleartext traffic only to make the hardcoded localhost endpoint reachable. It does not expose a network API; authentication and a restrictive network security configuration are required before any LAN access is added.
+See [docs/ROADMAP.md](docs/ROADMAP.md). This public repository should never contain private user data, API tokens, or backups.
