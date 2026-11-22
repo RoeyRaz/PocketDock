@@ -2,7 +2,7 @@
 
 An Android-first companion for a Windows PC. The goal is to run useful lightweight jobs **on the phone**, not simply mirror desktop data.
 
-> **Status:** Early prototype. No APK or production server exists yet.
+> **Status:** Termux Runner was tested successfully on the Samsung phone (user confirmed). Initial Android app source and GitHub Actions workflow are present, but the APK build and phone installation have not yet been verified.
 
 ## What we are building
 
@@ -50,3 +50,13 @@ Never commit passwords, API keys, private Notion data, Android backups, or perso
 See [docs/ROADMAP.md](docs/ROADMAP.md) for scope and success criteria.
 
 **Maintainer:** RoeyRaz. License and public release plan to be decided.
+
+## Native Android APK (prototype)
+
+Android app source is in `app/`. The landscape dashboard checks the existing loopback-only Runner at `127.0.0.1:8799`, shows online/offline status, and provides a manual Refresh button. It does not automatically start Termux and does not run a background service.
+
+The workflow at [Actions](https://github.com/RoeyRaz/PocketDock/actions) attempts a cloud debug build on changes to Android code. **A committed workflow does not mean a build has succeeded.**
+
+After the workflow shows a successful run, download the `pocketdock-debug-apk` build artifact, extract the APK on the Android phone, and install it. Run the Python Runner in Termux first, then open the app and press Refresh.
+
+The app currently permits HTTP cleartext traffic only to make the hardcoded localhost endpoint reachable. It does not expose a network API; authentication and a restrictive network security configuration are required before any LAN access is added.
