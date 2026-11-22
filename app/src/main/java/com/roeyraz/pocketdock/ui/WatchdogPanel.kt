@@ -9,6 +9,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
@@ -32,7 +34,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -91,31 +95,51 @@ fun WatchdogPanel() {
     }
 
     if (!paired) {
+        val keyboard = LocalSoftwareKeyboardController.current
+        fun connectRunner() {
+            try {
+                RunnerPairing.save(context, tokenInput)
+                tokenInput = ""
+                keyboard?.hide()
+                paired = true
+                error = ""
+            } catch (_: Exception) {
+                error = "קוד לא תקין"
+            }
+        }
+
         DockCard("חיבור מאובטח ל־Runner", Modifier.fillMaxSize()) {
-            Text("כדי לנהל בדיקות מהאפליקציה, צריך לחבר אותה למנוע שכבר רץ ב־Termux.", fontSize = 13.sp)
-            Text("ב־Termux פתח חלון נוסף והרץ:", color = Gray, fontSize = 12.sp)
+            // Pairing action is alongside the input, always before the long help text.
+            // The IME Done action also pairs when the landscape keyboard covers buttons.
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                OutlinedTextField(
+                    value = tokenInput,
+                    onValueChange = { tokenInput = it },
+                    label = { Text("קוד חיבור מקומי") },
+                    visualTransformation = PasswordVisualTransformation(),
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                    keyboardActions = KeyboardActions(onDone = { connectRunner() }),
+                    modifier = Modifier.weight(1f),
+                )
+                Button(
+                    enabled = tokenInput.isNotBlank(),
+                    onClick = { connectRunner() },
+                ) { Text("חבר Runner") }
+            }
+            if (error.isNotBlank()) Text(error, color = Red, fontSize = 12.sp)
+            Text(
+                "אפשר גם ללחוץ על סיום במקלדת לאחר הדבקת הקוד.",
+                fontSize = 12.sp,
+                color = Gray,
+            )
+            Text("כדי להציג את הקוד ב־Termux, פתח חלון נוסף והרץ:", color = Gray, fontSize = 12.sp)
             Text("cd ~/PocketDock", color = Green, fontSize = 12.sp)
             Text("python runner/server.py --show-token", color = Green, fontSize = 12.sp)
-            Text("העתק את הקוד שיופיע והדבק כאן. הוא מוצפן ונשמר רק בטלפון.", color = Gray, fontSize = 11.sp)
-            OutlinedTextField(
-                value = tokenInput,
-                onValueChange = { tokenInput = it },
-                label = { Text("קוד חיבור מקומי") },
-                visualTransformation = PasswordVisualTransformation(),
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth(),
-            )
-            Text(error, color = Red, fontSize = 12.sp)
-            Button(onClick = {
-                try {
-                    RunnerPairing.save(context, tokenInput)
-                    tokenInput = ""
-                    paired = true
-                    error = ""
-                } catch (_: Exception) {
-                    error = "קוד לא תקין"
-                }
-            }) { Text("חבר Runner") }
+            Text("הקוד מוצפן ונשמר רק בטלפון. אין צורך לעבור לטאב אחר.", color = Gray, fontSize = 11.sp)
         }
         return
     }
