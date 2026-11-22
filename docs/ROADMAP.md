@@ -6,15 +6,22 @@ Turn an unused Samsung Galaxy A72 into a useful, landscape-oriented companion th
 
 ## Milestone 1 — Runner proof of concept
 
-- [ ] Install an up-to-date Termux build on the Android phone.
-- [ ] Start `python runner/server.py` on the phone.
-- [ ] Read `http://127.0.0.1:8799/health` using the phone browser.
+- [x] Install an up-to-date Termux build on the Android phone (confirmed Runner launched).
+- [x] Start `python runner/server.py` on the phone (user confirmed it works).
+- [x] Read `http://127.0.0.1:8799/health` using the phone browser (user confirmed success; response text not independently inspected).
 - [ ] Verify the runner still works when the Windows PC is off.
 - [ ] Record Android version, battery impact, heat, and whether Android suspends the process.
 
 **Done when:** an independent process runs on the phone and is stopped cleanly. Pushing code is not evidence it has run successfully.
 
 ## Milestone 2 — Native Android panel
+
+- [x] Commit the first Kotlin + Jetpack Compose source and Actions workflow.
+- [ ] Verify that the GitHub Actions build completes successfully.
+- [ ] Download and install the resulting debug APK on the Samsung.
+- [ ] With Termux Runner active, confirm the app displays ONLINE.
+- [ ] Confirm OFFLINE appears when Termux Runner is stopped.
+
 
 Kotlin + Jetpack Compose, landscape-first layout. Start with read-only runner status, tasks, and development status. Avoid rewriting all existing PhoneBox functions at once.
 
