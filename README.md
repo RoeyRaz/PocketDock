@@ -1,21 +1,41 @@
 # PocketDock
 
-Android-first landscape companion for a Windows PC. Useful light work runs on the **Samsung phone** instead of spawning additional Windows services.
+**PhoneBox controls Windows. PocketDock makes the old Samsung useful as a separate little computer.**
 
-**Current state:** The 0.1 APK was installed on the Samsung and showed `RUNNER ONLINE` (confirmed by the user). Version **0.2** adds real Focus and Developer screens, but its new build has **not yet been validated on the phone**. The computer-off independence test is also pending.
+PocketDock consists of a Termux-hosted Python Runner and a native, landscape-first Android APK. It performs its own HTTPS monitoring, keeps local results and optionally displays Android notifications when a monitored service changes state. It does not add another Windows background agent.
 
-## What version 0.2 implements
+> **Status:** v0.3 source implementation. The older v0.1 APK and Runner were reported working on the Samsung. CI and physical-phone verification are still required for v0.3.
 
-- **Home:** live local Runner status, uptime, available Termux storage and a manual network check executed on the phone.
-- **Focus:** a local foreground 25/45-minute timer, the next event from the Android calendar (requires permission), and **read-only Notion Daylight** tasks after an optional one-time connection.
-- **Dev:** latest workflow status and open pull requests from a **public GitHub repository**. Repository is editable in the UI. A button opens Codex Cloud in the browser.
-- **Settings:** optionally store a scoped Notion integration secret **only on the phone**, encrypted using Android Keystore. The token is never compiled into the APK or committed to GitHub.
+## Responsibilities
 
-No permanent Windows process, no Android boot receiver, no root and no remote shell.
+| Piece | Job |
+| --- | --- |
+| Existing PhoneBox | Windows remote control, media, tasks, calendar and useful established features |
+| PocketDock Runner | On-phone periodic checks, SQLite history, bounded automation and optional notifications |
+| PocketDock Android APK | Configure and inspect Runner, manage a private file Inbox, view project/build status |
+| GitHub Actions / Codex Cloud | Heavy code builds and development in cloud infrastructure |
+| Existing Notchix | Native, lightweight Windows desktop interface, kept separate |
 
-## Install the updated Runner
+Do not rebuild PhoneBox's features in PocketDock just because they can be copied.
 
-In the existing Termux folder on the **phone**, stop the old Runner with Ctrl+C, then:
+## What is implemented in v0.3
+
+- HTTPS Watchdog with a default 15-minute GitHub API check, up to 12 checks, configurable 5–1440-minute intervals, manual runs and disable/delete.
+- Local SQLite database retaining checks and up to 300 **state-change** events; no event flood on repeated successes.
+- Device-generated random pairing token, authenticated localhost control endpoints and encrypted pairing token in Android Keystore.
+- Optional Android notifications **only when state changes**, via separately installed Termux:API.
+- Phone Runner metrics: process uptime and available Termux storage.
+- Android APK: **שירותים**, Home, Focus, Dev, **קבצים**, Settings. The existing Focus and Dev screens remain optional; PhoneBox is the main interface for already-solved Windows features.
+- Private, manual on-phone Inbox using Android's system file picker. Bounded at 150 MB per file, with manual export and deletion.
+- GitHub Actions building debug APKs and running Python tests. Build work stays off Windows.
+
+**Explicitly not implemented:** executing arbitrary shell commands, unattended Windows process migration, private Codex session control, automatic file sync, remote PC control, SFTP storage, backup, direct LAN access or remote network scanning. Those need separate authorization, threat modeling and measured benefit.
+
+## Setup
+
+**Read [the Samsung setup guide](docs/SETUP_ANDROID.md)** to pull new code in Termux, install the APK, pair it with the local Runner, configure optional notifications or boot behavior, and perform the physical-phone tests.
+
+Short version on the Samsung in Termux:
 
 ```sh
 cd ~/PocketDock
@@ -23,41 +43,23 @@ git pull --ff-only
 python runner/server.py
 ```
 
-Open `http://127.0.0.1:8799/health` to verify the basic endpoint. The new endpoints are:
+Open another Termux session to display the pairing token locally:
 
-- `/status`: process uptime and storage available to Termux.
-- `/checks/github`: a single outbound GitHub connectivity check initiated from the phone.
+```sh
+cd ~/PocketDock
+python runner/server.py --show-token
+```
 
-The HTTP server binds to loopback `127.0.0.1` only. **Do not expose it to your local network or the public internet.** It has no ability to execute shell commands.
+Paste that token into the **שירותים** tab, never into GitHub, Notion or chat.
 
-## Download and install the updated APK
+**Watchdog API:** `http://127.0.0.1:8799/health` remains compatible with the old app; `/api/overview`, `/api/checks`, `/api/history` require the device's pairing token.
 
-Run the [Android debug APK workflow](https://github.com/RoeyRaz/PocketDock/actions/workflows/android-debug.yml) manually, or use the output from an approved PR build. The successful job uploads a `pocketdock-debug-apk` artifact containing `app-debug.apk`. Install it over the older debug APK. **Do not install an artifact if its build failed.**
+## Safety and validation
 
-The Android UI and Runner communicate over localhost. The build is run in GitHub Actions, not Android Studio on your Windows machine.
+The Runner binds only to `127.0.0.1`. Public HTTPS destinations are probed without following redirects. Direct IP/private destinations and arbitrary command execution are not supported. No root needed. Autostart and notifications are optional and off by default.
 
-## Optional: connect Daylight read-only
+The main evidence still needed is the phone-only independence test with Windows powered off, stability under Samsung battery restrictions and measured RAM/CPU reduction after a *specific* existing task has been safely moved. The project does not claim that those tests have already passed.
 
-1. Create a Notion **internal integration** for your own workspace, with **Read content** capability only. Do not grant write access.
-2. In Notion, share the Daylight **task database** with that integration. Copy its **data source ID** (not the page title or URL).
-3. In PocketDock open **הגדרות**. Enter the data source ID and the internal integration token. Tap **שמור**.
-4. Open **פוקוס** and refresh. The app requests active tasks (excluding the Shop list when present).
+[Roadmap](docs/ROADMAP.md) · [GitHub Actions](https://github.com/RoeyRaz/PocketDock/actions) · [PhoneBox](https://github.com/ersinkoc/phonebox)
 
-The token stays on the Android device and is encrypted at rest via Android Keystore. No token is passed through GitHub Actions, placed in source code, or sent to this chat. Treat the token like a password. You can revoke it in Notion or tap **נתק** in the app. Requires internet access from the phone and a working Notion API integration. Errors are shown in the UI.
-
-Without this configuration, Focus still provides the local timer and Android calendar view. The regular PhoneBox and existing Daylight sync remain untouched.
-
-## Calendar permissions
-
-Focus requests Android's `READ_CALENDAR` permission when you tap **אשר גישה ליומן**. The next visible calendar event on the phone is shown. If the relevant Google Calendar account isn't synced to the Samsung, it won't appear even if it exists on your Windows computer.
-
-## Important limitations
-
-- The Focus timer runs in the app, not in a persistent background service. No background alerts yet.
-- Dev uses GitHub's public API without a token. Private repositories require a separate authenticated connection, which is not implemented.
-- Codex opens in the browser. PocketDock **does not** yet have access to private Codex session status.
-- Daylight is **read-only**. No creating or marking tasks complete.
-- Status refreshes are on-demand to avoid unnecessary network and battery usage.
-- No existing Windows tasks have been migrated or disabled. Offloading must be measured before changing the user's working setup.
-
-See [docs/ROADMAP.md](docs/ROADMAP.md). This public repository should never contain private user data, API tokens, or backups.
+Maintained by RoeyRaz. Licensing and public release still need decisions.
