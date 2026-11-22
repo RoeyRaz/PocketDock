@@ -175,15 +175,27 @@ fun WatchdogPanel() {
                         Column(Modifier.weight(1f)) {
                             Text(item.name, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
                             Text(
-                                "${item.url} · כל ${item.intervalMinutes} דקות",
+                                "${if (item.kind == "github_actions") "GitHub Actions" else item.url} · כל ${item.intervalMinutes} דקות",
                                 fontSize = 10.sp, color = Gray, maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
                             )
+                            if (item.lastChecked > 0) Text(
+                                "בדיקה אחרונה: " + SimpleDateFormat("dd.MM HH:mm", Locale("he", "IL"))
+                                    .format(Date(item.lastChecked * 1000L)),
+                                color = Gray,
+                                fontSize = 10.sp,
+                            )
                             Text(
                                 when (item.state) {
-                                    "up" -> "תקין · ${item.latencyMs}ms"
-                                    "down" -> "תקלה · ${item.error}"
-                                    else -> "עוד לא נבדק"
+                                    "up" -> if (item.kind == "github_actions")
+                                        "בנייה אחרונה תקינה · ${item.error}"
+                                        else "תקין · ${item.latencyMs}ms"
+                                    "down" -> if (item.kind == "github_actions")
+                                        "כישלון בבנייה · ${item.error}"
+                                        else "תקלה · ${item.error}"
+                                    else -> if (item.kind == "github_actions" && item.error.isNotBlank())
+                                        "מצב בנייה: ${item.error}"
+                                        else "עוד לא נבדק"
                                 },
                                 fontSize = 11.sp,
                                 color = if (item.state == "down") Red else Green,

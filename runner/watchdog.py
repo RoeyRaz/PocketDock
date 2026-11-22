@@ -123,17 +123,37 @@ class WatchdogStore:
                 id TEXT PRIMARY KEY, name TEXT NOT NULL, url TEXT NOT NULL,
                 interval_minutes INTEGER NOT NULL, enabled INTEGER NOT NULL DEFAULT 1,
                 last_state TEXT, last_checked REAL, last_http INTEGER,
-                last_latency_ms INTEGER, last_error TEXT)""")
+                last_latency_ms INTEGER, last_error TEXT, kind TEXT NOT NULL DEFAULT 'http')""")
             conn.execute("""CREATE TABLE IF NOT EXISTS events (
                 id INTEGER PRIMARY KEY AUTOINCREMENT, check_id TEXT,
                 timestamp REAL NOT NULL, state TEXT NOT NULL, message TEXT NOT NULL)""")
             conn.execute("CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT)")
-            n = conn.execute("SELECT COUNT(*) AS n FROM checks").fetchone()["n"]
-            if n == 0:
-                conn.execute(
-                    "INSERT INTO checks (id,name,url,interval_minutes,enabled) VALUES (?,?,?,?,?)",
-                    ("github-api", "GitHub API", DEFAULT_URL, 15, 1),
-                )
+            # Existing 0.3 databases upgrade in-place without resetting tokens or history.
+            columns = {row[1] for row in conn.execute("PRAGMA table_info(checks)")}
+            if "kind" not in columns:
+                conn.execute("ALTER TABLE checks ADD COLUMN kind TEXT NOT NULL DEFAULT 'http'")
+            # Initialize built-in checks only on first boot. A user's removal
+            # must not be undone on every restart.
+            if conn.execute("SELECT value FROM settings WHERE key='health_defaults_seeded'").fetchone() is None:
+                n = conn.execute("SELECT COUNT(*) AS n FROM checks").fetchone()["n"]
+                if n == 0:
+                    conn.execute(
+                        "INSERT INTO checks (id,name,url,interval_minutes,enabled) VALUES (?,?,?,?,?)",
+                        ("github-api", "GitHub API", DEFAULT_URL, 15, 1),
+                    )
+                conn.execute("INSERT INTO settings (key,value) VALUES ('health_defaults_seeded','true')")
+            # Seed once only, so deleting this monitor later is respected.
+            if conn.execute("SELECT value FROM settings WHERE key='ci_defaults_seeded'").fetchone() is None:
+                current_count = conn.execute("SELECT COUNT(*) FROM checks").fetchone()[0]
+                if current_count < MAX_CHECKS:
+                    conn.execute(
+                        "INSERT OR IGNORE INTO checks (id,name,url,interval_minutes,enabled,kind) "
+                        "VALUES (?,?,?,?,?,?)",
+                        ("pocketdock-ci", "PocketDock CI",
+                         "https://api.github.com/repos/RoeyRaz/PocketDock/actions/runs?per_page=1",
+                         30, 1, "github_actions"),
+                    )
+                conn.execute("INSERT INTO settings (key,value) VALUES ('ci_defaults_seeded','true')")
             if conn.execute("SELECT value FROM settings WHERE key='notifications'").fetchone() is None:
                 conn.execute("INSERT INTO settings (key,value) VALUES ('notifications','false')")
         try:
@@ -240,7 +260,27 @@ class WatchdogStore:
         check = self.get_check(identifier)
         if check is None:
             return None
-        ok, code, latency, error = checker(check["url"])
+        if check.get("kind") == "github_actions" and checker is probe:
+            try:
+                from .ci_monitor import probe_ci
+            except ImportError:
+                from ci_monitor import probe_ci
+            ok, code, latency, error = probe_ci(check["url"])
+        else:
+            ok, code, latency, error = checker(check["url"])
+        # In-progress/cancelled builds and transient API errors are not verdicts.
+        # Keep the last completed build state to avoid false recovery alerts.
+        if ok is None:
+            now = time.time()
+            with self.lock, self._connect() as conn:
+                conn.execute(
+                    "UPDATE checks SET last_checked=?, last_http=?, last_latency_ms=?, "
+                    "last_error=? WHERE id=?",
+                    (now, code, latency, error[:160], identifier),
+                )
+            return {"id": identifier, "state": check["last_state"],
+                    "pending": True, "http": code,
+                    "latency_ms": latency, "error": error}
         current = "up" if ok else "down"
         changed = check["last_state"] is not None and check["last_state"] != current
         now = time.time()
@@ -252,7 +292,7 @@ class WatchdogStore:
             )
             # Store first reading and state transitions. Avoid logging unchanged checks.
             if changed or check["last_state"] is None:
-                message = (f"HTTP {code}" if ok else error)[:160]
+                message = (error if check.get("kind") == "github_actions" else (f"HTTP {code}" if ok else error))[:160]
                 conn.execute(
                     "INSERT INTO events (check_id,timestamp,state,message) VALUES (?,?,?,?)",
                     (identifier, now, current, message),
