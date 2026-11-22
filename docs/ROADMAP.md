@@ -51,7 +51,7 @@ Kotlin + Jetpack Compose, landscape-first layout. Start with read-only runner st
 - Compare Windows RAM/CPU under similar conditions before claiming improvements.
 - Do not mark hardware or APK tests complete until actually verified on the phone.
 
-## Milestone 2.1 — Focus and Developer screens (0.2 PR)
+## Milestone 2.1 — Focus and Developer screens (0.2)
 
 - [x] Implement native landscape Focus view with 25/45-minute timer.
 - [x] Implement on-demand Android Calendar next-event view and runtime permission.
@@ -59,7 +59,7 @@ Kotlin + Jetpack Compose, landscape-first layout. Start with read-only runner st
 - [x] Implement public GitHub Actions and PR summaries, plus a Codex Cloud browser shortcut.
 - [x] Extend the phone Runner with read-only status and fixed network check endpoints.
 - [x] Add Python Runner smoke tests and add them to GitHub CI.
-- [ ] Verify Android 0.2 build passes.
+- [x] Verify Android 0.2 build passes (PR #1, GitHub Actions run 45070733917; Runner unit tests, Gradle build and artifact upload succeeded).
 - [ ] Install 0.2 on the Samsung, verify Focus/Dev UI and Runner online.
 - [ ] Authorize calendar permission and check the next real calendar event.
 - [ ] Configure read-only Notion integration **on the phone only**, verify Daylight tasks load.
