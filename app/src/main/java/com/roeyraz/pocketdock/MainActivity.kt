@@ -1,6 +1,8 @@
 package com.roeyraz.pocketdock
 
 import android.Manifest
+import android.content.IntentFilter
+import android.os.BatteryManager
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
@@ -118,7 +120,7 @@ private fun PocketDockApp() {
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             Column {
                 Text("PocketDock", fontSize = 23.sp, fontWeight = FontWeight.SemiBold)
-                Text("Android companion · 0.3", color = Muted, fontSize = 11.sp)
+                Text("Android companion · 0.4", color = Muted, fontSize = 11.sp)
             }
             Spacer(Modifier.weight(1f))
             Tab.entries.forEach { option ->
@@ -163,8 +165,24 @@ private fun StatusText(value: String, color: Color = Accent) {
     Text(value, fontSize = 17.sp, fontWeight = FontWeight.SemiBold, color = color)
 }
 
+
+private fun phoneBattery(context: android.content.Context): String {
+    val intent = context.registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
+        ?: return "לא זמין"
+    val level = intent.getIntExtra(BatteryManager.EXTRA_LEVEL, -1)
+    val scale = intent.getIntExtra(BatteryManager.EXTRA_SCALE, -1)
+    if (level < 0 || scale <= 0) return "לא זמין"
+    val pct = level * 100 / scale
+    val status = intent.getIntExtra(BatteryManager.EXTRA_STATUS, -1)
+    val charging = status == BatteryManager.BATTERY_STATUS_CHARGING ||
+        status == BatteryManager.BATTERY_STATUS_FULL
+    return "$pct% " + if (charging) "בטעינה" else "לא בטעינה"
+}
+
 @Composable
 private fun HomePanel() {
+    val context = LocalContext.current
+    var battery by remember { mutableStateOf(phoneBattery(context)) }
     val scope = rememberCoroutineScope()
     var runner by remember { mutableStateOf(RunnerSnapshot(false, "Not checked")) }
     var checking by remember { mutableStateOf(true) }
@@ -198,6 +216,7 @@ private fun HomePanel() {
                     scope.launch {
                         checking = true
                         runner = readRunner()
+                        battery = phoneBattery(context)
                         checking = false
                     }
                 },
@@ -206,6 +225,7 @@ private fun HomePanel() {
         Panel("פעולות בטלפון", Modifier.weight(1f).fillMaxHeight()) {
             StatusText("ON ANDROID")
             Text("הבדיקות מתבצעות על ה־Samsung, בלי שירות חדש ב־Windows.", fontSize = 12.sp)
+            Text("סוללה: $battery", color = Muted, fontSize = 12.sp)
             Text(network, color = Muted, fontSize = 12.sp)
             Spacer(Modifier.weight(1f))
             OutlinedButton(
@@ -214,9 +234,9 @@ private fun HomePanel() {
             ) { Text("בדיקת רשת בטלפון") }
         }
         Panel("מצב הפרויקט", Modifier.weight(1f).fillMaxHeight()) {
-            StatusText("FOCUS + DEV")
-            Text("פוקוס: יומן, Daylight וטיימר לימוד.", fontSize = 12.sp)
-            Text("פיתוח: מצב GitHub וכניסה ל־Codex Cloud.", fontSize = 12.sp)
+            StatusText("WATCHDOG + CI")
+            Text("שירותים: ניטור תקינות ואת תוצאות הבנייה של PocketDock.", fontSize = 12.sp)
+            Text("פיתוח ו־Focus נשארים כלים משניים לצד PhoneBox.", fontSize = 12.sp)
             Text("אין ריצה אוטומטית של שירותי Windows.", color = Muted, fontSize = 12.sp)
         }
     }
