@@ -62,6 +62,8 @@ import com.roeyraz.pocketdock.data.nextCalendarEvent
 import com.roeyraz.pocketdock.data.phoneNetworkCheck
 import com.roeyraz.pocketdock.data.readDaylight
 import com.roeyraz.pocketdock.data.readDev
+import com.roeyraz.pocketdock.ui.WatchdogPanel
+import com.roeyraz.pocketdock.ui.StoragePanel
 import com.roeyraz.pocketdock.data.readRunner
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -76,9 +78,11 @@ private val Accent = Color(0xFF91C5F2)
 private val Good = Color(0xFF80D3B4)
 
 private enum class Tab(val label: String) {
+    RUNNER("שירותים"),
     HOME("בית"),
     FOCUS("פוקוס"),
     DEV("פיתוח"),
+    STORAGE("קבצים"),
     SETTINGS("הגדרות"),
 }
 
@@ -103,7 +107,7 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 private fun PocketDockApp() {
-    var tab by rememberSaveable { mutableStateOf(Tab.HOME) }
+    var tab by rememberSaveable { mutableStateOf(Tab.RUNNER) }
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -114,7 +118,7 @@ private fun PocketDockApp() {
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             Column {
                 Text("PocketDock", fontSize = 23.sp, fontWeight = FontWeight.SemiBold)
-                Text("Android companion · 0.2", color = Muted, fontSize = 11.sp)
+                Text("Android companion · 0.3", color = Muted, fontSize = 11.sp)
             }
             Spacer(Modifier.weight(1f))
             Tab.entries.forEach { option ->
@@ -127,6 +131,8 @@ private fun PocketDockApp() {
         }
         Box(Modifier.weight(1f)) {
             when (tab) {
+                Tab.RUNNER -> WatchdogPanel()
+                Tab.STORAGE -> StoragePanel()
                 Tab.HOME -> HomePanel()
                 Tab.FOCUS -> FocusPanel(onSettings = { tab = Tab.SETTINGS })
                 Tab.DEV -> DevPanel()
