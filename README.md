@@ -4,7 +4,7 @@
 
 PocketDock consists of a Termux-hosted Python Runner and a native, landscape-first Android APK. It performs its own HTTPS monitoring, keeps local results and optionally displays Android notifications when a monitored service changes state. It does not add another Windows background agent.
 
-> **Status:** v0.3 is merged and its GitHub Actions run passed Python tests and Android APK build. The earlier APK/Runner showed ONLINE on Samsung; **v0.3 still needs installation and on-device verification**.
+> **Status:** v0.3 is installed on Samsung and the user confirmed one active GitHub API Watchdog check reported healthy. Version **0.4** adds real CI outcome tracking and battery visibility. Its cloud build and on-device validation must still be verified.
 
 ## Responsibilities
 
@@ -18,13 +18,13 @@ PocketDock consists of a Termux-hosted Python Runner and a native, landscape-fir
 
 Do not rebuild PhoneBox's features in PocketDock just because they can be copied.
 
-## What is implemented in v0.3
+## What is implemented in v0.3 and v0.4
 
-- HTTPS Watchdog with a default 15-minute GitHub API check, up to 12 checks, configurable 5–1440-minute intervals, manual runs and disable/delete.
+- HTTPS Watchdog with a 15-minute GitHub API uptime check and a separate **PocketDock CI** monitor. The CI monitor checks the latest *completed* GitHub Actions build every 30 minutes, tracks failures and recoveries, and does not treat in-progress or API-error results as success. Up to 12 checks, manual runs and disable/delete are supported.
 - Local SQLite database retaining checks and up to 300 **state-change** events; no event flood on repeated successes.
 - Device-generated random pairing token, authenticated localhost control endpoints and encrypted pairing token in Android Keystore.
 - Optional Android notifications **only when state changes**, via separately installed Termux:API.
-- Phone Runner metrics: process uptime and available Termux storage.
+- Phone Runner metrics: process uptime and available Termux storage. Android Home also reads battery percentage and charging state on demand, with no new permission.
 - Android APK: **שירותים**, Home, Focus, Dev, **קבצים**, Settings. The existing Focus and Dev screens remain optional; PhoneBox is the main interface for already-solved Windows features.
 - Private, manual on-phone Inbox using Android's system file picker. Bounded at 150 MB per file, with manual export and deletion.
 - GitHub Actions building debug APKs and running Python tests. Build work stays off Windows.
@@ -53,6 +53,8 @@ python runner/server.py --show-token
 Paste that token into the **שירותים** tab, never into GitHub, Notion or chat.
 
 **Watchdog API:** `http://127.0.0.1:8799/health` remains compatible with the old app; `/api/overview`, `/api/checks`, `/api/history` require the device's pairing token.
+
+When upgrading from v0.3, the Runner adds the CI monitor once without deleting existing checks, pairing tokens or history. Any check you deliberately delete stays deleted. The separate CI monitor works only after Termux pulls and restarts the updated Runner. The APK update alone does not change a running Python process.
 
 ## Safety and validation
 
