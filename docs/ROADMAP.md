@@ -92,7 +92,7 @@ No Windows processes removed until their migration is proven safe and measured. 
 - [x] Preserve existing checks, pairing token, saved event history and user-deleted defaults across restarts.
 - [x] Show each monitor's last check time and distinct CI failure/success detail in the Android UI.
 - [x] Show Samsung battery percentage and charging state in the Android Home tab without an additional permission.
-- [ ] Confirm Runner 0.4 Python unit tests and Android cloud build pass.
+- [x] Runner 0.4 Python unit tests, Android build and APK artifact upload succeeded in [Actions run 45075683460](https://github.com/RoeyRaz/PocketDock/actions/runs/45075683460).
 - [ ] Install updated APK and pull updated Termux code on the Samsung. The local pair token should be retained.
 - [ ] Verify GitHub API uptime remains separate from **PocketDock CI**, with the latter checking every 30 minutes.
 - [ ] Verify a failure and recovery event is recorded once each and optional notifications work only if explicitly enabled.
