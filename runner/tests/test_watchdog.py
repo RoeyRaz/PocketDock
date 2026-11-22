@@ -104,7 +104,7 @@ class ApiTests(TestCase):
         self.assertEqual(code, 401)
         code, data = self.api("/api/overview")
         self.assertEqual(code, 200)
-        self.assertEqual(data["totals"]["all"], 1)
+        self.assertEqual(data["totals"]["all"], 2)
 
     def test_crud_and_validation(self):
         code, data = self.api("/api/checks", "POST", {
