@@ -4,7 +4,7 @@
 
 PocketDock consists of a Termux-hosted Python Runner and a native, landscape-first Android APK. It performs its own HTTPS monitoring, keeps local results and optionally displays Android notifications when a monitored service changes state. It does not add another Windows background agent.
 
-> **Status:** v0.3 source implementation. The older v0.1 APK and Runner were reported working on the Samsung. CI and physical-phone verification are still required for v0.3.
+> **Status:** v0.3 is merged and its GitHub Actions run passed Python tests and Android APK build. The earlier APK/Runner showed ONLINE on Samsung; **v0.3 still needs installation and on-device verification**.
 
 ## Responsibilities
 
