@@ -84,3 +84,19 @@ No Windows processes removed until their migration is proven safe and measured. 
 - [ ] Identify and safely migrate exactly one existing PC-side background check, with baseline and after measurements.
 
 **Scope control:** PhoneBox continues handling Windows UI. PocketDock intentionally has no PC remote-control feature, private Codex API access, automated SFTP sync or Windows task migration. Those are neither built nor verified by this milestone.
+
+## Milestone 2.3 — CI failure monitoring and power visibility (v0.4)
+
+- [x] Add an independent on-phone latest-build monitor for the public PocketDock GitHub Actions workflow. Seed the check once, even on an existing v0.3 SQLite database.
+- [x] Interpret only completed success/failure/timed-out as verdicts. Builds in progress, cancelled runs, and GitHub API errors retain the last result and do not cause false recovery notifications.
+- [x] Preserve existing checks, pairing token, saved event history and user-deleted defaults across restarts.
+- [x] Show each monitor's last check time and distinct CI failure/success detail in the Android UI.
+- [x] Show Samsung battery percentage and charging state in the Android Home tab without an additional permission.
+- [ ] Confirm Runner 0.4 Python unit tests and Android cloud build pass.
+- [ ] Install updated APK and pull updated Termux code on the Samsung. The local pair token should be retained.
+- [ ] Verify GitHub API uptime remains separate from **PocketDock CI**, with the latter checking every 30 minutes.
+- [ ] Verify a failure and recovery event is recorded once each and optional notifications work only if explicitly enabled.
+- [ ] Verify Samsung background behavior and battery impact, plus independence with Windows powered off.
+- [ ] Measure a real Windows workload before disabling or migrating it.
+
+**Scope:** GitHub Actions is the only confirmed public development monitor here. Notchix's repository has not been verified, so no pretend build status or monitoring task was created. Existing PhoneBox, Daylight, Windows tasks, storage and user-selected battery settings remain untouched.
