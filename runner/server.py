@@ -101,9 +101,12 @@ class Handler(BaseHTTPRequestHandler):
         if not self._valid_host():
             self.send_json(403, {"error": "Invalid Host"})
             return
+        path = self._path()
+        if path in ("/health", "/status", "/checks/github"):
+            self.send_json(405, {"error": "Read-only endpoint"})
+            return
         if not self._require_auth():
             return
-        path = self._path()
         try:
             body = self._json_body()
             if path == "/api/checks":
